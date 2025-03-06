@@ -1,70 +1,42 @@
-import os
+import pandas as pd
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-import random
+from tensorflow.keras.models import load_model
 
-# ==================== ⚡ โหลดโมเดล ====================
-MODEL_PATH = "apetizing_model.keras"
-IMAGE_FOLDER = "test_images/"
-
-print("📌 กำลังโหลดโมเดล...")
-model = tf.keras.models.load_model(MODEL_PATH)
+# 1️⃣ โหลดโมเดล
+model = load_model("apetizing_model.keras")
 print("✅ โหลดโมเดลสำเร็จ!")
 
-# ==================== ⚡ เลือกภาพจากแต่ละหมวด ====================
-categories = ["Burger", "Dessert", "Pizza", "Ramen", "Sushi"]
-selected_images = {}
+# 2️⃣ โหลดไฟล์ test.csv
+CSV_PATH = "Test Set Samples/test.csv"
+IMAGE_FOLDER = "Test Set Samples/Test Images"  # ตำแหน่งของรูปภาพ
 
-for category in categories:
-    category_path = os.path.join(IMAGE_FOLDER, category)
-    image_files = [f for f in os.listdir(category_path) if f.lower().endswith((".jpg", ".png", ".jpeg"))]
+df_test = pd.read_csv(CSV_PATH)
 
-    if len(image_files) < 2:
-        print(f"❌ หมวด {category} มีภาพไม่พอ (ต้องมีอย่างน้อย 2 รูป)")
-        continue
-
-    selected_images[category] = random.sample(image_files, 2)
-
-# ==================== ⚡ โหลดและแสดงผลภาพ ====================
+# 3️⃣ ฟังก์ชันโหลดและแปลงรูปภาพ
 def load_and_preprocess_image(image_path):
-    img = load_img(image_path, target_size=(224, 224))
-    img_array = img_to_array(img) / 255.0  # Normalize เป็น 0-1
-    return img, img_array
+    img = tf.keras.preprocessing.image.load_img(image_path, target_size=(224, 224))
+    img = tf.keras.preprocessing.image.img_to_array(img) / 255.0  # Normalize 0-1
+    return img
 
-for category, (img1_name, img2_name) in selected_images.items():
-    img1_path = os.path.join(IMAGE_FOLDER, category, img1_name)
-    img2_path = os.path.join(IMAGE_FOLDER, category, img2_name)
+x1, x2 = [], []
 
-    img1, img1_array = load_and_preprocess_image(img1_path)
-    img2, img2_array = load_and_preprocess_image(img2_path)
+for _, row in df_test.iterrows():
+    img1_path = f"{IMAGE_FOLDER}/{row['Image 1']}"  # หรือเปลี่ยนนามสกุลให้ตรง
+    img2_path = f"{IMAGE_FOLDER}/{row['Image 2']}"
 
-    # ========== ⚡ ให้โมเดลทำนาย ==========
-    prediction = model.predict([np.expand_dims(img1_array, axis=0), np.expand_dims(img2_array, axis=0)])
-    pred_score = prediction[0][0]
-    predicted_winner = 1 if pred_score < 0.5 else 2
+    x1.append(load_and_preprocess_image(img1_path))
+    x2.append(load_and_preprocess_image(img2_path))
 
-    # ========== ⚡ แสดงผลภาพ ==========
-    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+x1, x2 = np.array(x1), np.array(x2)
 
-    axes[0].imshow(img1)
-    axes[0].axis("off")
-    axes[0].set_title(f"Image 1", fontsize=14, fontweight="bold")
+print(f"✅ โหลดรูปภาพ {len(x1)} คู่สำเร็จ!")
 
-    axes[1].imshow(img2)
-    axes[1].axis("off")
-    axes[1].set_title(f"Image 2", fontsize=14, fontweight="bold")
+# 4️⃣ ทำนายผล
+y_pred_prob = model.predict([x1, x2])  # ได้ค่า probability (0 - 1)
+y_pred = (y_pred_prob > 0.5).astype(int)  # แปลงค่าเป็น 0 หรือ 1
+df_test["Winner"] = y_pred + 1  # กลับเป็น 1 หรือ 2
 
-    # ใส่ชื่อไฟล์ใต้ภาพ
-    fig.text(0.25, 0.02, f"{img1_name}", ha="center", fontsize=10, color="blue")
-    fig.text(0.75, 0.02, f"{img2_name}", ha="center", fontsize=10, color="blue")
-
-    plt.suptitle(
-        f"🍔 {category} | Model Select: Image {predicted_winner}",
-        fontsize=14,
-        fontweight="bold",
-        color="green"
-    )
-
-    plt.show()
+# 5️⃣ บันทึกไฟล์ CSV ใหม่
+df_test.to_csv("Test Set Samples/test.csv", index=False)
+print("✅ บันทึกผลลัพธ์ลง test.csv สำเร็จ!")
