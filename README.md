@@ -41,13 +41,21 @@ Make sure you have Python 3.8 or higher installed on your machine. It is highly 
 Open your terminal and install the required packages using the following command:
 ```bash
 pip install tensorflow opencv-python numpy matplotlib scikit-learn
+```
 
 ### 3. Running the Project
-To classify food images using the core model pipeline:
+
+**To classify food images using the core model pipeline:**
+```bash
 python superappetizing/Apetizing.py
+```
 
-To evaluate model metrics and display the Confusion Matrix:
+**To evaluate model metrics and display the Confusion Matrix:**
+```bash
 python superappetizing/confusionmatrix.py
+```
 
-To run human preference alignment tests (Questionnaire evaluation):
+**To run human preference alignment tests (Questionnaire evaluation):**
+```bash
 python superappetizing/testquestionairs.py
+```
